@@ -1,50 +1,31 @@
-# Sử dụng Python 3.9 nền Debian Buster
-FROM python:3.9-slim-buster
+# Sử dụng image đã cài sẵn Chrome và thư viện cần thiết
+FROM ghcr.io/puppeteer/puppeteer:latest
 
-# Thiết lập môi trường không tương tác để tránh treo khi cài đặt
-ENV DEBIAN_FRONTEND=noninteractive
+USER root
 
-# Cập nhật và cài đặt các thư viện hệ thống với cơ chế tự động thử lại nếu lỗi mạng
-RUN apt-get update -y && \
-    apt-get install -y --no-install-recommends \
-    wget \
-    gnupg \
-    unzip \
-    git \
+# Cài đặt các công cụ điều khiển màn hình ảo còn thiếu
+# Sử dụng mirror khác nếu mặc định bị lỗi 100
+RUN apt-get update && apt-get install -y \
     xvfb \
     x11vnc \
     fluxbox \
     wmctrl \
-    libgbm1 \
-    libasound2 \
-    fonts-liberation \
-    libnss3 \
-    xdg-utils \
-    ca-certificates \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-
-# Cài đặt Google Chrome Stable (Sử dụng link trực tiếp từ Google)
-RUN wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb && \
-    apt-get update -y && \
-    apt-get install -y ./google-chrome-stable_current_amd64.deb || apt-get install -f -y && \
-    rm google-chrome-stable_current_amd64.deb && \
-    rm -rf /var/lib/apt/lists/*
+    procps \
+    git \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Cài đặt noVNC
 RUN git clone https://github.com/novnc/noVNC.git /opt/noVNC && \
     git clone https://github.com/novnc/websockify /opt/noVNC/utils/websockify && \
     ln -s /opt/noVNC/vnc.html /opt/noVNC/index.html
 
-# Cài đặt thư viện Python cần thiết
-RUN pip install --no-cache-dir psutil
+# Cài đặt psutil cho Python
+RUN pip install psutil
 
-# Sao chép mã nguồn
-COPY main.py /app/main.py
 WORKDIR /app
+COPY main.py .
 
-# Render mặc định dùng cổng 10000 hoặc 80, file main.py của chúng ta dùng 80
+# Render yêu cầu dùng PORT từ biến môi trường hoặc mặc định 10000/80
 EXPOSE 80
 
-# Chạy bằng python
-CMD ["python", "main.py"]
+CMD ["python3", "main.py"]
